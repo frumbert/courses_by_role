@@ -97,7 +97,7 @@ class block_courses_by_role extends block_base {
     /**
      * This is effectively the same as the enrollib.php version with the same name, BUT I specifically need the context id returned, which is unset by that routine! Argh!
      */
-    private function enrol_get_my_courses($fields = null, $sort = 'visible DESC,sortorder ASC',
+    private function enrol_get_my_courses($fields = null, $sort = 'visible DESC,q.name,sortorder ASC',
                               $limit = 0, $courseids = []) {
         global $DB, $USER;
 
@@ -128,15 +128,17 @@ class block_courses_by_role extends block_base {
         $sort    = trim($sort);
         if (!empty($sort)) {
             $rawsorts = explode(',', $sort);
-            $sorts = array();
+            $sorts = [];
             foreach ($rawsorts as $rawsort) {
                 $rawsort = trim($rawsort);
-                if (strpos($rawsort, 'c.') === 0) {
-                    $rawsort = substr($rawsort, 2);
+                if (strpos($rawsort, '.') === false) {
+                    list($alias,$fld) = ['c', $rawsort];
+                } else {
+                    list($alias,$fld) = explode('.',$rawsort);
                 }
-                $sorts[] = trim($rawsort);
+                $sorts[] = "{$alias}.{$fld}";
             }
-            $sort = 'c.'.implode(',c.', $sorts);
+            $sort = implode(', ', $sorts);
             $orderby = "ORDER BY $sort";
         }
 
@@ -150,7 +152,8 @@ class block_courses_by_role extends block_base {
         }
 
         $coursefields = 'c.' .join(',c.', $fields);
-        $ccselect = ', ' . context_helper::get_preload_record_columns_sql('ctx');
+        $ccselect = ', q.name categoryname';
+        $ccselect .= ', ' . context_helper::get_preload_record_columns_sql('ctx');
         $ccjoin = "LEFT JOIN {context} ctx ON (ctx.instanceid = c.id AND ctx.contextlevel = :contextlevel)";
         $params['contextlevel'] = CONTEXT_COURSE;
         $wheres = implode(" AND ", $wheres);
@@ -164,6 +167,7 @@ class block_courses_by_role extends block_base {
         //note: we can not use DISTINCT + text fields due to Oracle and MS limitations, that is why we have the subselect there
         $sql = "SELECT $coursefields $ccselect
                   FROM {course} c
+                  INNER JOIN {course_categories} q ON c.category = q.id
                   JOIN (SELECT DISTINCT e.courseid
                           FROM {enrol} e
                           JOIN {user_enrolments} ue ON (ue.enrolid = e.id AND ue.userid = :userid)
@@ -177,12 +181,10 @@ class block_courses_by_role extends block_base {
         $params['enabled'] = ENROL_INSTANCE_ENABLED;
         $params['now1']    = round(time(), -2); // improves db caching
         $params['now2']    = $params['now1'];
-
+var_dump($sql);
         $courses = $DB->get_records_sql($sql, $params, 0, $limit);
-
         // preload contexts and check visibility
         foreach ($courses as $id=>$course) {
-            //context_helper::preload_from_record($course); // no, we WANT this information
             if (!$course->visible) {
                 if (!$context = context_course::instance($id, IGNORE_MISSING)) {
                     unset($courses[$id]);
@@ -197,7 +199,6 @@ class block_courses_by_role extends block_base {
         }
 
         //wow! Is that really all? :-D
-
         return $courses;
     }
 
