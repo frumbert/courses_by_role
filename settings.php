@@ -26,6 +26,13 @@ if ($ADMIN->fulltree) {
 
 	$choices = $DB->get_records_menu("role", null, '', 'shortname,shortname s2');
 
+
+    $settings->add(new admin_setting_configtext('block_courses_by_role/title',
+       get_string('title'),
+        '',
+        get_string('pluginname', 'block_courses_by_role'),
+        PARAM_RAW_TRIMMED));
+
     $settings->add(new admin_setting_configmultiselect('block_courses_by_role/roles',
         get_string('roles', 'block_courses_by_role'),
         get_string('roles_desc', 'block_courses_by_role'),

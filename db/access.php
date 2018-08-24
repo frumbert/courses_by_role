@@ -17,7 +17,7 @@
 /**
  * Participants block caps.
  *
- * @package    block_participants
+ * @package    courses_by_role
  * @copyright  2018 tim@avide.com.au
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -25,7 +25,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = array(
-
     'block/courses_by_role:addinstance' => array(
         'riskbitmask' => RISK_SPAM | RISK_XSS,
 

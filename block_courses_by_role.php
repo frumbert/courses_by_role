@@ -24,13 +24,19 @@
 
 class block_courses_by_role extends block_base {
     function init() {
-        $this->title = get_string('pluginname', 'block_courses_by_role');
-        $this->cfg = get_config('block_courses_by_role');
-        foreach (explode("\n",$this->cfg->labels) as $label) {
+        $this->config = get_config('block_courses_by_role');
+        $this->title = format_string(get_string('pluginname', 'block_courses_by_role'));
+        $labels = isset($this->config->labels) ? explode("\n",$this->config->labels) : [];
+        $roles = isset($this->config->roles) ? $this->config->roles : 'teacher,student';
+        foreach ($labels as $label) {
             list($key,$value) = explode(':',$label);
             $this->rolenames[$key] = $value;
         }
-        $this->roles = explode(',',$this->cfg->roles);
+        $this->roles = explode(',',$roles);
+    }
+
+    function specialization() {
+        $this->title = isset($this->config->title) ? format_string($this->config->title) : format_string("not set then " . get_string('pluginname', 'block_courses_by_role'));
     }
 
     public function has_config() {

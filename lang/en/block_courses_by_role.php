@@ -23,6 +23,7 @@
  */
 
 $string['pluginname'] = 'Courses by Role';
+$string['title'] = 'Block title';
 $string['labels'] = 'Custom role labels';
 $string['labels_desc'] = "Rather than using the role shortname, when matched use this label rather than the shortname. Use shortname:label format, e.g.\n
 	editingteacher:Trainer\n
