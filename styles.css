@@ -1,0 +1,11 @@
+.cbr_courses > li {
+	margin-left: 1em;
+}
+.cbr_expando, .cbr_courses {
+	list-style-type: none;
+}
+.cbr_expando .cbr_catname > a {
+	margin-right: 1em;
+	outline: none;
+	text-decoration: none;
+}

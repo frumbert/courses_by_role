@@ -43,6 +43,11 @@ class block_courses_by_role extends block_base {
         return true;
     }
 
+    function get_required_javascript() {
+         $this->page->requires->jquery();
+         $this->page->requires->js('/blocks/courses_by_role/js/cbr.js');
+    }
+
     function get_content() {
 
         global $CFG, $DB, $USER;
@@ -55,8 +60,9 @@ class block_courses_by_role extends block_base {
         $this->content = new stdClass();
         $this->content->text = 'enrolled courses';
 
-        // cache the list of courses I can see
-        $courses = $this->enrol_get_my_courses();
+        // cache the list of courses I can see, which includes the category name and role context id (in one sql call)
+        $courses = $this->enrol_get_my_courses_extra();
+
         // get the list of roles that I am assigned in
         list($cond, $para) = $DB->get_in_or_equal($this->roles);
         $sql = "SELECT ra.id, r.shortname, ra.contextid
@@ -67,27 +73,40 @@ class block_courses_by_role extends block_base {
                 ORDER BY r.`sortorder`";
         $myroles = $DB->get_records_sql($sql, array_merge([$USER->id], $para));
 
-        // this could be rendered a tree, but I'm keeping it uncomplicated
-        $lastheading = ""; $open = false;
+        // courses, sorted into their categories, sorted into their roles, by the magic of hashed arrays
+        $r = [];
         foreach ($myroles as $role) {
-            if ($role->shortname !== $lastheading) {
-                if ($open === true) $ar[] = html_writer::end_tag("ul");
-                $ar[] = html_writer::tag("p", html_writer::tag("b", isset($this->rolenames[$role->shortname]) ? $this->rolenames[$role->shortname] : $role->shortname));
-                $ar[] = html_writer::start_tag("ul");
-                $open = true;
-            }
             foreach ($courses as $course) {
                 if ($course->ctxid === $role->contextid) {
                     $url = new moodle_url("/course/view.php", array("id" => $course->id));
-                    $link = html_writer::link($url, $course->fullname);
-                    $ar[] = html_writer::tag("li", $link);
-                }
+                    $link = html_writer::tag("li", html_writer::link($url, $course->fullname));
+                    $r[$role->shortname][$course->categoryname][] = $link; // course->id;
+                };
             }
-            $lastheading = $role->shortname;
         }
-        $ar[] = html_writer::end_tag("ul");
-        $this->content->text = implode(PHP_EOL,$ar);
-        return $this->content;
+
+        // ready to output
+        $html = [];
+        foreach ($r as $rolename=>$cat) {
+            $html[] = html_writer::tag("p", html_writer::tag("b", isset($this->rolenames[$rolename]) ? $this->rolenames[$rolename] : $rolename), array("class"=>"cbr_rolename"));
+            ksort($cat);
+            $html[] = html_writer::start_tag("ul", array("class"=>"cbr_expando", "role"=>"list", "aria-multiselectable"=>"true"));
+            foreach ($cat as $catname=>$crs) {
+                $html[] = html_writer::start_tag("li");
+                $html[] = html_writer::start_tag("span", array("class"=>"cbr_catname"));
+                $html[] = html_writer::tag("a", "<i class='fa fa-plus-square'></i>", array("href"=>"#","class"=>"cbr_toggle"));
+                $html[] = html_writer::tag("b", $catname);
+                $html[] = html_writer::end_tag("span");
+                $html[] = html_writer::start_tag("ul",array("class"=>"cbr_courses hidden"));
+                $html[] = implode('', $crs);
+                $html[] = html_writer::end_tag("ul");
+                $html[] = html_writer::end_tag("li");
+            }
+            $html[] = "</ul>";
+        }
+
+        $this->content->text = implode('', $html);
+
     }
 
     function applicable_formats() {
@@ -97,7 +116,7 @@ class block_courses_by_role extends block_base {
     /**
      * This is effectively the same as the enrollib.php version with the same name, BUT I specifically need the context id returned, which is unset by that routine! Argh!
      */
-    private function enrol_get_my_courses($fields = null, $sort = 'visible DESC,q.name,sortorder ASC',
+    private function enrol_get_my_courses_extra($fields = null, $sort = 'visible DESC,q.name,sortorder ASC',
                               $limit = 0, $courseids = []) {
         global $DB, $USER;
 
@@ -152,7 +171,7 @@ class block_courses_by_role extends block_base {
         }
 
         $coursefields = 'c.' .join(',c.', $fields);
-        $ccselect = ', q.name categoryname';
+        $ccselect  = ', q.name categoryname';
         $ccselect .= ', ' . context_helper::get_preload_record_columns_sql('ctx');
         $ccjoin = "LEFT JOIN {context} ctx ON (ctx.instanceid = c.id AND ctx.contextlevel = :contextlevel)";
         $params['contextlevel'] = CONTEXT_COURSE;
@@ -181,7 +200,7 @@ class block_courses_by_role extends block_base {
         $params['enabled'] = ENROL_INSTANCE_ENABLED;
         $params['now1']    = round(time(), -2); // improves db caching
         $params['now2']    = $params['now1'];
-var_dump($sql);
+// var_dump($sql);
         $courses = $DB->get_records_sql($sql, $params, 0, $limit);
         // preload contexts and check visibility
         foreach ($courses as $id=>$course) {
@@ -195,6 +214,10 @@ var_dump($sql);
                     continue;
                 }
             }
+            unset($course->ctxpath);
+            unset($course->ctxdepth);
+            unset($course->ctxlevel);
+            unset($course->ctxinstance);
             $courses[$id] = $course;
         }
 

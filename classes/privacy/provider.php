@@ -15,26 +15,34 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Participants block caps.
+ * This file explains this plugins status in relation to the GDPR.
  *
  * @package    block_courses_by_role
  * @copyright  2018 tim@avide.com.au
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+defined('MOODLE_INTERNAL') || die;
 
-$capabilities = array(
-    'block/courses_by_role:addinstance' => array(
-        'riskbitmask' => RISK_SPAM | RISK_XSS,
+/**
+ * A provider class to address GDPR
+ *
+ * @package    block_courses_by_role
+ * @copyright  2018 tim@avide.com.au
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class provider implements \core_privacy\local\metadata\null_provider {
 
-        'captype' => 'write',
-        'contextlevel' => CONTEXT_BLOCK,
-        'archetypes' => array(
-            'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ),
+    // Support PHP back to 5.6 (for Moodle 3.3 and lower).
+    use \core_privacy\local\legacy_polyfill;
 
-        'clonepermissionsfrom' => 'moodle/site:manageblocks'
-    ),
-);
+    /**
+     * Get the language string identifier from the component's language
+     * file to explain why this plugin stores no data.
+     *
+     * @return string
+     */
+    public static function _get_reason() {
+        return 'privacy:metadata';
+    }
+}
