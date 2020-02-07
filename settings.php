@@ -28,7 +28,7 @@ if ($ADMIN->fulltree) {
 
 
     $settings->add(new admin_setting_configtext('block_courses_by_role/title',
-       get_string('title'),
+       get_string('title', 'block_courses_by_role'),
         '',
         get_string('pluginname', 'block_courses_by_role'),
         PARAM_RAW_TRIMMED));
