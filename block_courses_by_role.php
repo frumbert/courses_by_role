@@ -66,11 +66,11 @@ class block_courses_by_role extends block_base {
         // get the list of roles that I am assigned in
         list($cond, $para) = $DB->get_in_or_equal($this->roles);
         $sql = "SELECT ra.id, r.shortname, ra.contextid
-                FROM mdl_role_assignments ra
-                INNER JOIN mdl_role r ON r.id = ra.roleid
+                FROM {role_assignments} ra
+                INNER JOIN {role} r ON r.id = ra.roleid
                 WHERE ra.userid = ? AND r.shortname
                 $cond
-                ORDER BY r.`sortorder`";
+                ORDER BY r.sortorder";
         $myroles = $DB->get_records_sql($sql, array_merge([$USER->id], $para));
 
         // courses, sorted into their categories, sorted into their roles, by the magic of hashed arrays
